@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { aiSystemsApi } from '../services/api'
-import { Bot, Plus, Trash2, Edit, Search, Filter, X } from 'lucide-react'
+import { Bot, Plus, Trash2, Edit, Search, Filter, X, Download } from 'lucide-react'
 
 interface AISystem {
   id: number
@@ -26,6 +26,7 @@ export default function AISystems() {
   const [searchTerm, setSearchTerm] = useState('')
   const [riskFilter, setRiskFilter] = useState('')
   const [complianceFilter, setComplianceFilter] = useState('')
+  const [isExporting, setIsExporting] = useState(false)
 
   const { data: systems = [], isLoading } = useQuery({
     queryKey: ['ai-systems'],
@@ -58,6 +59,27 @@ export default function AISystems() {
 
     return matchesSearch && matchesRisk && matchesCompliance
   })
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true)
+      const data = await aiSystemsApi.export({
+        risk_level: riskFilter || undefined
+      })
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'ai_systems.csv'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export failed:', error)
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,13 +114,23 @@ export default function AISystems() {
           <h1 className="text-2xl font-bold text-gray-900">AI Systems</h1>
           <p className="text-gray-600">Manage your AI systems for compliance tracking</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-        >
-          <Plus className="w-5 h-5" />
-          Add AI System
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-all shadow-sm"
+          >
+            <Download className={`w-5 h-5 ${isExporting ? 'animate-pulse' : ''}`} />
+            {isExporting ? 'Exporting...' : 'Export CSV'}
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 shadow-sm transition-all"
+          >
+            <Plus className="w-5 h-5" />
+            Add AI System
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters */}
